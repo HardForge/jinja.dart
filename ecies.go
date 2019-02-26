@@ -72,3 +72,34 @@ func Decrypt(privkey *PrivateKey, msg []byte) ([]byte, error) {
 
 	// Shift message
 	msg = msg[65:]
+
+	// Derive shared secret
+	ss, err := ethPubkey.Decapsulate(privkey)
+	if err != nil {
+		return nil, err
+	}
+
+	// AES decryption part
+	nonce := msg[:16]
+	tag := msg[16:32]
+
+	// Create Golang-accepted ciphertext
+	ciphertext := bytes.Join([][]byte{msg[32:], tag}, nil)
+
+	block, err := aes.NewCipher(ss)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create new aes block: %w", err)
+	}
+
+	gcm, err := cipher.NewGCMWithNonceSize(block, 16)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create gcm cipher: %w", err)
+	}
+
+	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, fmt.Errorf("cannot decrypt ciphertext: %w", err)
+	}
+
+	return plaintext, nil
+}
