@@ -27,3 +27,58 @@ func TestGenerateKey(t *testing.T) {
 	_, err := GenerateKey()
 	assert.NoError(t, err)
 }
+
+func BenchmarkEncrypt(b *testing.B) {
+	privkey := NewPrivateKeyFromBytes(testingReceiverPrivkey)
+
+	msg := []byte(testingJsonMessage)
+	for i := 0; i < b.N; i++ {
+		_, err := Encrypt(privkey.PublicKey, msg)
+		if err != nil {
+			b.Fail()
+		}
+	}
+}
+
+func BenchmarkDecrypt(b *testing.B) {
+	privkey := NewPrivateKeyFromBytes(testingReceiverPrivkey)
+	msg := []byte(testingJsonMessage)
+
+	ciphertext, err := Encrypt(privkey.PublicKey, msg)
+	if err != nil {
+		b.Fail()
+	}
+
+	for i := 0; i < b.N; i++ {
+		_, err := Decrypt(privkey, ciphertext)
+		if err != nil {
+			b.Fail()
+		}
+	}
+}
+
+func TestEncryptAndDecrypt(t *testing.T) {
+	privkey := NewPrivateKeyFromBytes(testingReceiverPrivkey)
+
+	ciphertext, err := Encrypt(privkey.PublicKey, []byte(testingMessage))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	plaintext, err := Decrypt(privkey, ciphertext)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, testingMessage, string(plaintext))
+}
+
+func TestPublicKeyDecompression(t *testing.T) {
+	// Generate public key
+	privkey, err := GenerateKey()
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	// Drop Y part and restore it
+	pubkey, err := NewPublicKeyFromHex(privkey.PublicKey.Hex(true))
