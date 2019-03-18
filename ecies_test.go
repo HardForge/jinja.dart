@@ -138,3 +138,63 @@ func TestDecryptAgainstPythonVersion(t *testing.T) {
 
 	resp, err := http.PostForm(pythonBackend, form)
 	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer resp.Body.Close()
+
+	if !assert.Equal(t, http.StatusOK, resp.StatusCode) {
+		return
+	}
+
+	hexBytes, err := ioutil.ReadAll(resp.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	ciphertext, err := hex.DecodeString(string(hexBytes))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	plaintext, err := Decrypt(prv, ciphertext)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, testingMessage, string(plaintext))
+}
+
+func TestEncryptAgainstPythonVersion(t *testing.T) {
+	prv, err := NewPrivateKeyFromHex(testingReceiverPrivkeyHex)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	ciphertext, err := Encrypt(prv.PublicKey, []byte(testingMessage))
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	form := make(url.Values)
+	form.Set("data", hex.EncodeToString(ciphertext))
+	form.Set("prv", testingReceiverPrivkeyHex)
+
+	resp, err := http.PostForm(pythonBackend, form)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	defer resp.Body.Close()
+
+	if !assert.Equal(t, http.StatusOK, resp.StatusCode) {
+		return
+	}
+
+	plaintext, err := ioutil.ReadAll(resp.Body)
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, string(plaintext), testingMessage)
+}
