@@ -60,3 +60,62 @@ func NewPrivateKeyFromBytes(priv []byte) *PrivateKey {
 		D: new(big.Int).SetBytes(priv),
 	}
 }
+
+// Bytes returns private key raw bytes
+func (k *PrivateKey) Bytes() []byte {
+	return k.D.Bytes()
+}
+
+// Hex returns private key bytes in hex form
+func (k *PrivateKey) Hex() string {
+	return hex.EncodeToString(k.Bytes())
+}
+
+// Encapsulate encapsulates key by using Key Encapsulation Mechanism and returns symmetric key;
+// can be safely used as encryption key
+func (k *PrivateKey) Encapsulate(pub *PublicKey) ([]byte, error) {
+	if pub == nil {
+		return nil, fmt.Errorf("public key is empty")
+	}
+
+	var secret bytes.Buffer
+	secret.Write(k.PublicKey.Bytes(false))
+
+	sx, sy := pub.Curve.ScalarMult(pub.X, pub.Y, k.D.Bytes())
+	secret.Write([]byte{0x04})
+
+	// Sometimes shared secret coordinates are less than 32 bytes; Big Endian
+	l := len(pub.Curve.Params().P.Bytes())
+	secret.Write(zeroPad(sx.Bytes(), l))
+	secret.Write(zeroPad(sy.Bytes(), l))
+
+	return kdf(secret.Bytes())
+}
+
+// ECDH derives shared secret;
+// Must not be used as encryption key, it increases chances to perform successful key restoration attack
+func (k *PrivateKey) ECDH(pub *PublicKey) ([]byte, error) {
+	if pub == nil {
+		return nil, fmt.Errorf("public key is empty")
+	}
+
+	// Shared secret generation
+	sx, sy := pub.Curve.ScalarMult(pub.X, pub.Y, k.D.Bytes())
+
+	var ss []byte
+	if sy.Bit(0) != 0 { // If odd
+		ss = append(ss, 0x03)
+	} else { // If even
+		ss = append(ss, 0x02)
+	}
+
+	// Sometimes shared secret is less than 32 bytes; Big Endian
+	l := len(pub.Curve.Params().P.Bytes())
+	for i := 0; i < l-len(sx.Bytes()); i++ {
+		ss = append(ss, 0x00)
+	}
+
+	return append(ss, sx.Bytes()...), nil
+}
+
+// Equals compares two private keys with constant time (to resist timing attacks)
