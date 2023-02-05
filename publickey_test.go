@@ -5,4 +5,5 @@ import (
 	"testing"
 )
 
-func
+func TestNewPublicKeyFromHex(t *testing.T) {
+	_, err := N
