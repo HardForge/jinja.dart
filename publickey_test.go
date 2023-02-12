@@ -6,4 +6,5 @@ import (
 )
 
 func TestNewPublicKeyFromHex(t *testing.T) {
-	_, err := N
+	_, err := NewPublicKeyFromHex(testingReceiverPubkeyHex)
+	assert.NoError(t
