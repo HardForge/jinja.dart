@@ -7,4 +7,8 @@ import (
 
 func TestNewPublicKeyFromHex(t *testing.T) {
 	_, err := NewPublicKeyFromHex(testingReceiverPubkeyHex)
-	assert.NoError(t
+	assert.NoError(t, err)
+}
+
+func TestPublicKey_Equals(t *testing.T) {
+	privkey, 
