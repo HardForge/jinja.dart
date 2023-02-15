@@ -16,4 +16,5 @@ func TestPublicKey_Equals(t *testing.T) {
 		return
 	}
 
-	assert.True(t, privkey.PublicKey.Equals(privkey.PublicKey
+	assert.True(t, privkey.PublicKey.Equals(privkey.PublicKey))
+}
